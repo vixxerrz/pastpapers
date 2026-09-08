@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Maan's Past Paper Selector</title>
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="logo.png">
 
@@ -65,8 +65,8 @@
             border-radius: 20px;
             border: 1px solid var(--border-color);
             border-top: 1px solid var(--glass-highlight);
-            box-shadow: 
-                0 20px 50px rgba(0, 0, 0, 0.6), 
+            box-shadow:
+                0 20px 50px rgba(0, 0, 0, 0.6),
                 0 0 30px rgba(16, 185, 129, 0.15),
                 inset 0 1px 0 var(--glass-highlight);
             width: 100%;
@@ -212,6 +212,44 @@
             box-shadow: 0 6px 22px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
         }
 
+        /* Floating Calculator Corner Button */
+        .calc-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: rgba(6, 20, 14, 0.45);
+            border: 1px solid var(--border-color);
+            border-top: 1px solid var(--glass-highlight);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            backdrop-filter: blur(16px) saturate(180%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            color: var(--text-main);
+            text-decoration: none;
+            box-shadow:
+                0 10px 25px rgba(0, 0, 0, 0.5),
+                0 0 15px rgba(16, 185, 129, 0.2);
+            transition: transform 0.2s ease, background-color 0.2s, box-shadow 0.2s;
+        }
+
+        .calc-btn:hover {
+            transform: scale(1.1);
+            background: rgba(16, 185, 129, 0.3);
+            box-shadow:
+                0 12px 30px rgba(0, 0, 0, 0.6),
+                0 0 25px rgba(52, 211, 153, 0.4);
+        }
+
+        .calc-btn:active {
+            transform: scale(0.95);
+        }
+
         @media (max-width: 400px) {
             .card {
                 padding: 20px 16px;
@@ -224,6 +262,14 @@
             button {
                 width: 100%;
             }
+
+            .calc-btn {
+                bottom: 16px;
+                right: 16px;
+                width: 46px;
+                height: 46px;
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
@@ -231,6 +277,9 @@
 
 <!-- Background Canvas for Floating Bubbles -->
 <canvas id="bgCanvas"></canvas>
+
+<!-- Floating Calculator Corner Button -->
+<a href="percentage.html" class="calc-btn" title="Percentage Calculator" aria-label="Percentage Calculator">🧮</a>
 
 <div class="card">
     <h2>Maan's Past Paper Viewer</h2>
@@ -245,6 +294,8 @@
             <option value="0625">Physics (0625)</option>
             <option value="0510">English (0510)</option>
             <option value="0580">Maths (0580)</option>
+            <option value="dhivehi">Dhivehi (SSC)</option>
+            <option value="islam">Islam (SSC)</option>
             <option value="custom">Custom Code</option>
         </select>
         <div id="customSubjectGroup" class="custom-input-group">
@@ -278,7 +329,7 @@
         </div>
 
         <!-- Session Selection -->
-        <div class="form-group">
+        <div class="form-group" id="sessionGroup">
             <label for="session">Session</label>
             <select id="session" onchange="updateUrlPreview()">
                 <option value="m">Feb/Mar (m)</option>
@@ -318,7 +369,6 @@
         return {
             x: Math.random() * canvas.width,
             y: canvas.height + Math.random() * 40,
-            // Larger radius so they remain clearly visible behind frosted glass
             radius: Math.random() * 6 + 3,
             speedY: Math.random() * 1.5 + 0.5,
             speedX: (Math.random() - 0.5) * 0.4,
@@ -354,7 +404,7 @@
                 ctx.shadowColor = 'rgba(52, 211, 153, 0.8)';
                 ctx.shadowBlur = 8;
                 ctx.fill();
-                ctx.shadowBlur = 0; // Reset blur for performance
+                ctx.shadowBlur = 0;
             }
 
             if (d.y + d.radius < 0 || currentOpacity <= 0.01) {
@@ -400,6 +450,14 @@
             { text: "Calculator (42)", value: "42" },
             { text: "Custom", value: "custom" }
         ],
+        "dhivehi": [
+            { text: "Paper 1", value: "I" },
+            { text: "Paper 2", value: "II" }
+        ],
+        "islam": [
+            { text: "Paper 1", value: "I" },
+            { text: "Paper 2", value: "II" }
+        ],
         "custom": [
             { text: "Custom", value: "custom" }
         ]
@@ -408,6 +466,7 @@
     function handleSubjectChange() {
         const subject = document.getElementById('subject').value;
         const customSubjectGroup = document.getElementById('customSubjectGroup');
+        const sessionGroup = document.getElementById('sessionGroup');
         const paperSelect = document.getElementById('paper');
 
         if (subject === 'custom') {
@@ -416,9 +475,16 @@
             customSubjectGroup.style.display = 'none';
         }
 
+        // Hide Session picker for SSC subjects (DPE uses a fixed naming convention)
+        if (subject === 'dhivehi' || subject === 'islam') {
+            sessionGroup.style.display = 'none';
+        } else {
+            sessionGroup.style.display = 'block';
+        }
+
         paperSelect.innerHTML = '';
         const options = paperPresets[subject] || [{ text: "Custom", value: "custom" }];
-        
+
         options.forEach(opt => {
             const el = document.createElement('option');
             el.value = opt.value;
@@ -443,25 +509,49 @@
     }
 
     function generateUrl(type) {
-        const baseUrl = "https://pastpapers.papacambridge.com/directories/CAIE/CAIE-pastpapers/upload/";
-        
-        let sub = document.getElementById('subject').value;
-        if (sub === 'custom') {
-            sub = document.getElementById('customSubject').value.trim();
+        const sub = document.getElementById('subject').value;
+
+        // DPE URL logic for SSC Dhivehi & Islam
+        if (sub === 'dhivehi' || sub === 'islam') {
+            const paper = document.getElementById('paper').value;
+            const yearShort = document.getElementById('year').value;
+            const fullYear = "20" + yearShort;
+
+            if (sub === 'dhivehi') {
+                if (type === 'ms') {
+                    return `https://dpe.edu.mv/media/documents/SSC%20Dhivehi%20Marking%20Scheme/SSC%20March%20${fullYear}%20Dhi%20%20Marking%20Scheme%20${paper}_Final.pdf`;
+                } else {
+                    return `https://dpe.edu.mv/media/documents/SSC%20Dhivehi%20Paper/SSC%20${fullYear}%20Dhi%20%20paper%20${paper}_Final.pdf`;
+                }
+            } else if (sub === 'islam') {
+                if (type === 'ms') {
+                    return `https://dpe.edu.mv/media/documents/SSC%20Islam%20Marking%20Scheme/SSC%20March%20${fullYear}%20Islam%20Marking%20Scheme%20${paper}_Final.pdf`;
+                } else {
+                    return `https://dpe.edu.mv/media/documents/SSC%20Islam%20Paper/SSC%20${fullYear}%20Islam%20Paper%20${paper}_Final.pdf`;
+                }
+            }
         }
 
-        let paper = document.getElementById('paper').value;
-        if (paper === 'custom') {
-            paper = document.getElementById('customPaper').value.trim();
+        // Standard CAIE URL logic
+        const baseUrl = "https://pastpapers.papacambridge.com/directories/CAIE/CAIE-pastpapers/upload/";
+
+        let subCode = sub;
+        if (subCode === 'custom') {
+            subCode = document.getElementById('customSubject').value.trim();
+        }
+
+        let paperVal = document.getElementById('paper').value;
+        if (paperVal === 'custom') {
+            paperVal = document.getElementById('customPaper').value.trim();
         }
 
         const session = document.getElementById('session').value;
         const year = document.getElementById('year').value;
 
-        sub = sub || "0000";
-        paper = paper || "00";
+        subCode = subCode || "0000";
+        paperVal = paperVal || "00";
 
-        return `${baseUrl}${sub}_${session}${year}_${type}_${paper}.pdf`;
+        return `${baseUrl}${subCode}_${session}${year}_${type}_${paperVal}.pdf`;
     }
 
     function updateUrlPreview() {
